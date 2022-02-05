@@ -5,7 +5,10 @@ import Keyboard from './Keyboard.vue'
 import { LetterState } from './types'
 
 // Get word of the day
+const keyMap = { '😀':'q','😃':'w','😄':'e','😁':'r','😆':'t','😅':'y','😂':'u','🤣':'i','🥲':'o','😊':'p','😇':'a','🙂':'s','🙃':'d','😉':'f','😌':'g','😍':'h','🥰':'j','😘':'k','😗':'l','😙':'z','😚':'x','😋':'c','😛':'v','😝':'b','😜':'n','🤪':'m'}
+const allKeys = '😀,😃,😄,😁,😆,😅,😂,🤣,🥲,😊,😇,🙂,🙃,😉,😌,😍,🥰,😘,😗,😙,😚,😋,😛,😝,😜,🤪'.split(',')
 const answer = getWordOfTheDay()
+const realAnswer = answer.split(',').map(x => keyMap[x]).join('');
 
 // Board state. Each tile is represented as { letter, state }
 const board = $ref(
@@ -43,8 +46,8 @@ onUnmounted(() => {
 
 function onKey(key: string) {
   if (!allowInput) return
-  if (/^[a-zA-Z]$/.test(key)) {
-    fillTile(key.toLowerCase())
+  if (allKeys.indexOf(key) > -1) {
+    fillTile(key)
   } else if (key === 'Backspace') {
     clearTile()
   } else if (key === 'Enter') {
@@ -72,14 +75,9 @@ function clearTile() {
 
 function completeRow() {
   if (currentRow.every((tile) => tile.letter)) {
-    const guess = currentRow.map((tile) => tile.letter).join('')
-    if (!allWords.includes(guess) && guess !== answer) {
-      shake()
-      showMessage(`Not in word list`)
-      return
-    }
+    const guess = currentRow.map((tile) => tile.letter).join(',')
 
-    const answerLetters: (string | null)[] = answer.split('')
+    const answerLetters: (string | null)[] = answer.split(',')
     // first pass: mark correct ones
     currentRow.forEach((tile, i) => {
       if (answerLetters[i] === tile.letter) {
@@ -129,7 +127,7 @@ function completeRow() {
     } else {
       // game over :(
       setTimeout(() => {
-        showMessage(answer.toUpperCase(), -1)
+        showMessage(answer.split(',').join(''), -1)
       }, 1600)
     }
   } else {
@@ -176,13 +174,14 @@ function genResultGrid() {
     <div class="message" v-if="message">
       {{ message }}
       <pre v-if="grid">{{ grid }}</pre>
+      <pre v-if="realAnswer">{{ realAnswer }}</pre>
     </div>
   </Transition>
   <header>
-    <h1>VVORDLE</h1>
+    <h1>emojdle</h1>
     <a
       id="source-link"
-      href="https://github.com/yyx990803/vue-wordle"
+      href="https://github.com/nahog/vue-wordle"
       target="_blank"
       >Source</a
     >
@@ -242,6 +241,7 @@ function genResultGrid() {
   transform: translateX(-50%);
   transition: opacity 0.3s ease-out;
   font-weight: 600;
+  font-size: 1.8em;
 }
 .message.v-leave-to {
   opacity: 0;

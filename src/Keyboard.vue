@@ -10,9 +10,9 @@ defineEmits<{
 }>()
 
 const rows = [
-  'qwertyuiop'.split(''),
-  'asdfghjkl'.split(''),
-  ['Enter', ...'zxcvbnm'.split(''), 'Backspace']
+  '😀,😃,😄,😁,😆,😅,😂,🤣,🥲,😊'.split(','),
+  '🙂,🙃,😉,😌,😍,🥰,😘,😗'.split(','),
+  ['Enter', ...'😙,😚,😋,😛,😝,😜,🤪'.split(','), 'Backspace']
 ]
 </script>
 
@@ -22,7 +22,7 @@ const rows = [
       <div class="spacer" v-if="i === 1"></div>
       <button
         v-for="key in row"
-        :class="[key.length > 1 && 'big', letterStates[key]]"
+        :class="[key.length > 2 && 'big', letterStates[key]]"
         @click="$emit('key', key)"
       >
         <span v-if="key !== 'Backspace'">{{ key }}</span>
@@ -61,8 +61,9 @@ const rows = [
 button {
   font-family: inherit;
   font-weight: bold;
+  font-size: 1.6em;
   border: 0;
-  padding: 0;
+  padding: 2px;
   margin: 0 6px 0 0;
   height: 58px;
   border-radius: 4px;
@@ -74,7 +75,6 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
-  text-transform: uppercase;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.3);
   transition: all 0.2s 1.5s;
 }
