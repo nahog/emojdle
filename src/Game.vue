@@ -8,7 +8,12 @@ import { LetterState } from './types'
 const keyMap = { '😀':'q','😃':'w','😄':'e','😁':'r','😆':'t','😅':'y','😂':'u','🤣':'i','🥲':'o','😊':'p','😇':'a','🙂':'s','🙃':'d','😉':'f','😌':'g','😍':'h','🥰':'j','😘':'k','😗':'l','😙':'z','😚':'x','😋':'c','😛':'v','😝':'b','😜':'n','🤪':'m'}
 const allKeys = '😀,😃,😄,😁,😆,😅,😂,🤣,🥲,😊,😇,🙂,🙃,😉,😌,😍,🥰,😘,😗,😙,😚,😋,😛,😝,😜,🤪'.split(',')
 const answer = getWordOfTheDay()
-const realAnswer = answer.split(',').map(x => keyMap[x]).join('');
+const realAnswer = answer.split(',').map(x => keyMap[x]).join('')
+const endGame = $ref(false)
+
+// Get the current day
+const date = new Date();
+const currentDay = (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
 
 // Board state. Each tile is represented as { letter, state }
 const board = $ref(
@@ -53,6 +58,14 @@ function onKey(key: string) {
   } else if (key === 'Enter') {
     completeRow()
   }
+}
+
+function onCopy(key: string) {
+  let dataForClipboard = `Emojdle (😀) #${currentDay}\n\n`
+  dataForClipboard += `${message}\n`
+  dataForClipboard += `${grid}\n\n`
+  dataForClipboard += 'https://sharp-tereshkova-05daae.netlify.app/'
+  navigator.clipboard.writeText(dataForClipboard)
 }
 
 function fillTile(letter: string) {
@@ -117,6 +130,7 @@ function completeRow() {
           -1
         )
         success = true
+        endGame = true
       }, 1600)
     } else if (currentRowIndex < board.length - 1) {
       // go the next row
@@ -126,6 +140,7 @@ function completeRow() {
       }, 1600)
     } else {
       // game over :(
+      endGame = true
       setTimeout(() => {
         showMessage(answer.split(',').join(''), -1)
       }, 1600)
@@ -172,16 +187,20 @@ function genResultGrid() {
 <template>
   <Transition>
     <div class="message" v-if="message">
+      <pre v-if="endGame">Emojdle (😀) #{{currentDay}}<br/><br/></pre>
       {{ message }}
       <pre v-if="grid">{{ grid }}</pre>
-      <pre v-if="realAnswer">{{ realAnswer }}</pre>
+      <pre class='space' v-if="endGame">
+      <pre class='space' v-if="realAnswer">{{ realAnswer }}</pre>
+      <pre class='space'><button @click="onCopy()" class='button-copy'>COPY RESULT</button></pre>
+      </pre>
     </div>
   </Transition>
   <header>
-    <h1>emojdle</h1>
+    <h1>Emojdle (😀)</h1>
     <a
       id="source-link"
-      href="https://github.com/nahog/vue-wordle"
+      href="https://github.com/nahog/emojdle"
       target="_blank"
       >Source</a
     >
@@ -293,6 +312,24 @@ function genResultGrid() {
 }
 .tile.revealed .back {
   transform: rotateX(0deg);
+}
+
+.space {
+  margin: 0em;
+}
+
+.button-copy {
+  font-size: 0.7em;
+  border: 0;
+  padding: 12px;
+  height: 58px;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #559955;
+  color: white;
+  flex: 1;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.3);
+  transition: all 0.2s 1.5s;
 }
 
 @keyframes zoom {
