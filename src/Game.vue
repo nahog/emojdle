@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue'
-import { getWordOfTheDay, allWords } from './words'
+import { onUnmounted, onMounted } from 'vue'
+import { getWordOfTheDay } from './words'
 import Keyboard from './Keyboard.vue'
 import { LetterState } from './types'
 
 // Get word of the day
-const keyMap = { '😀':'q','😃':'w','😄':'e','😁':'r','😆':'t','😅':'y','😂':'u','🤣':'i','🥲':'o','😊':'p','😇':'a','🙂':'s','🙃':'d','😉':'f','😌':'g','😍':'h','🥰':'j','😘':'k','😗':'l','😙':'z','😚':'x','😋':'c','😛':'v','😝':'b','😜':'n','🤪':'m'}
+const keyMap:Record<string, string> = { '😀':'q','😃':'w','😄':'e','😁':'r','😆':'t','😅':'y','😂':'u','🤣':'i','🥲':'o','😊':'p','😇':'a','🙂':'s','🙃':'d','😉':'f','😌':'g','😍':'h','🥰':'j','😘':'k','😗':'l','😙':'z','😚':'x','😋':'c','😛':'v','😝':'b','😜':'n','🤪':'m'}
 const allKeys = '😀,😃,😄,😁,😆,😅,😂,🤣,🥲,😊,😇,🙂,🙃,😉,😌,😍,🥰,😘,😗,😙,😚,😋,😛,😝,😜,🤪'.split(',')
 const answer = getWordOfTheDay()
 const realAnswer = answer.split(',').map(x => keyMap[x]).join('')
-const endGame = $ref(false)
+let endGame = $ref(false)
 
 // Get the current day
-const date = new Date();
-const currentDay = (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
+const date = new Date()
+const currentDay = (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000
 
 // Board state. Each tile is represented as { letter, state }
-const board = $ref(
+let board = $ref(
   Array.from({ length: 6 }, () =>
     Array.from({ length: 5 }, () => ({
       letter: '',
@@ -36,7 +36,7 @@ let shakeRowIndex = $ref(-1)
 let success = $ref(false)
 
 // Keep track of revealed letters for the virtual keyboard
-const letterStates: Record<string, LetterState> = $ref({})
+let letterStates: Record<string, LetterState> = $ref({})
 
 // Handle keyboard input.
 let allowInput = true
@@ -47,6 +47,26 @@ window.addEventListener('keyup', onKeyup)
 
 onUnmounted(() => {
   window.removeEventListener('keyup', onKeyup)
+})
+
+const saveStateToLocalStorage = (message: string): void => {
+  localStorage.success = success
+  localStorage.grid = grid
+  localStorage.message = message
+  localStorage.letterStates = JSON.stringify(letterStates)
+  localStorage.board = JSON.stringify(board)
+  localStorage.dayDone = currentDay
+}
+
+onMounted(() => {
+  if (Number(localStorage.dayDone) === currentDay) {
+    endGame = true
+    success = localStorage.success === 'true';
+    grid = localStorage.grid
+    message = localStorage.message
+    letterStates = JSON.parse(localStorage.letterStates)
+    board = JSON.parse(localStorage.board)
+  }
 })
 
 function onKey(key: string) {
@@ -61,7 +81,7 @@ function onKey(key: string) {
 }
 
 function onCopy(key: string) {
-  let dataForClipboard = `Emojdle (😀) #${currentDay}\n\n`
+  let dataForClipboard = `Emojdle (😀) #${currentDay} ${currentRowIndex+1}/6\n\n`
   dataForClipboard += `${message}\n`
   dataForClipboard += `${grid}\n\n`
   dataForClipboard += 'https://sharp-tereshkova-05daae.netlify.app/'
@@ -123,14 +143,13 @@ function completeRow() {
       // yay!
       setTimeout(() => {
         grid = genResultGrid()
-        showMessage(
-          ['Genius', 'Magnificent', 'Impressive', 'Splendid', 'Great', 'Phew'][
-            currentRowIndex
-          ],
-          -1
-        )
+        const winMessage = ['Genius', 'Magnificent', 'Impressive', 'Splendid', 'Great', 'Phew'][
+          currentRowIndex
+        ]
+        showMessage(winMessage, -1)
         success = true
         endGame = true
+        saveStateToLocalStorage(winMessage)
       }, 1600)
     } else if (currentRowIndex < board.length - 1) {
       // go the next row
@@ -141,8 +160,10 @@ function completeRow() {
     } else {
       // game over :(
       endGame = true
+      const gameOverMessage = answer.split(',').join('')
+      saveStateToLocalStorage(gameOverMessage)
       setTimeout(() => {
-        showMessage(answer.split(',').join(''), -1)
+        showMessage(gameOverMessage, -1)
       }, 1600)
     }
   } else {
@@ -187,7 +208,7 @@ function genResultGrid() {
 <template>
   <Transition>
     <div class="message" v-if="message">
-      <pre v-if="endGame">Emojdle (😀) #{{currentDay}}<br/><br/></pre>
+      <pre v-if="endGame">Emojdle (<span v-if="success">😀</span><span v-if="!success">😡</span>) #{{currentDay}} {{currentRowIndex+1}}/6<br/><br/></pre>
       {{ message }}
       <pre v-if="grid">{{ grid }}</pre>
       <pre class='space' v-if="endGame">
@@ -198,36 +219,15 @@ function genResultGrid() {
   </Transition>
   <header>
     <h1>Emojdle (😀)</h1>
-    <a
-      id="source-link"
-      href="https://github.com/nahog/emojdle"
-      target="_blank"
-      >Source</a
-    >
+    <a id="source-link" href="https://github.com/nahog/emojdle" target="_blank">Source</a>
   </header>
   <div id="board">
-    <div
-      v-for="(row, index) in board"
-      :class="[
-        'row',
-        shakeRowIndex === index && 'shake',
-        success && currentRowIndex === index && 'jump'
-      ]"
-    >
-      <div
-        v-for="(tile, index) in row"
-        :class="['tile', tile.letter && 'filled', tile.state && 'revealed']"
-      >
+    <div v-for="(row, index) in board" :class="['row', shakeRowIndex === index && 'shake', success && currentRowIndex === index && 'jump']">
+      <div v-for="(tile, index) in row"  :class="['tile', tile.letter && 'filled', tile.state && 'revealed']">
         <div class="front" :style="{ transitionDelay: `${index * 300}ms` }">
           {{ tile.letter }}
         </div>
-        <div
-          :class="['back', tile.state]"
-          :style="{
-            transitionDelay: `${index * 300}ms`,
-            animationDelay: `${index * 100}ms`
-          }"
-        >
+        <div :class="['back', tile.state]" :style="{ transitionDelay: `${index * 300}ms`, animationDelay: `${index * 100}ms` }">
           {{ tile.letter }}
         </div>
       </div>
